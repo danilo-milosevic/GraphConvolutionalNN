@@ -52,3 +52,17 @@ class MatrixHelper:
         D_hat = np.diag(np.sum(A_hat, axis=1))
         D_hat_inv_sqrt = np.linalg.inv(np.sqrt(D_hat))
         return D_hat_inv_sqrt @ A_hat @ D_hat_inv_sqrt
+    
+class Metrics:
+    @staticmethod
+    def accuracy(y_true, y_pred_probs):
+        y_pred = np.argmax(y_pred_probs, axis=1)
+        
+        if len(y_true.shape) > 1:
+            y_true = np.argmax(y_true, axis=1)
+
+        correct_predictions = np.sum(y_true == y_pred)
+        total_predictions = y_true.shape[0]
+        
+        accuracy = correct_predictions / total_predictions
+        return accuracy
