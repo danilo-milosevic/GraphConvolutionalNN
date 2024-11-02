@@ -9,13 +9,18 @@ class GCN:
         self.activation = activation
         self.learning_rate = learning_rate
         
+        self.name=f'GCN_{n_features}x'
         # Initialize layers
         self.layers = []
         input_dim = n_features
         for hidden_dim in hidden_dims:
             self.layers.append(layers.GCNLayer(input_dim, hidden_dim, init_method, use_bias, start_lr, learning_rate))
+            self.name+=str(input_dim)+'x'
             input_dim = hidden_dim
+        
+        self.name+=str(output_dim)
         if global_pool is not None:
+            self.name+='_globalPool'
             self.layers.append(layers.GlobalPoolLayer(global_pool))
             self.layers.append(layers.DenseLayer(input_dim, output_dim, init_method, start_lr, learning_rate))
         else:
@@ -29,6 +34,9 @@ class GCN:
         H = self.layers[-1].forward(A_hat, H)
         return H
     
+    def get_name(self):
+        return self.name
+    
     def compute_gradients(self, predictions, targets, epoch):
         loss = helpers.LossFunctions.cross_entropy_loss(predictions, targets)
         
@@ -39,13 +47,15 @@ class GCN:
         
         return loss
     
-    def train_instance(self, A, X, Y, epoch):
+    def train_instance(self, A, X, Y, epoch, mask = None):
         predictions = self.forward(A, X)
+        if mask is not None:
+            predictions = predictions[mask]
+            Y = Y[mask]
         loss = self.compute_gradients(predictions, Y, epoch)
         return loss
-        
     
-    def train(self, adjecancy, data, targets, epochs=100, early_stopping = None):
+    def train(self, adjecancy, data, targets, epochs=100, early_stopping = None, mask = None):
         prev_loss = 0
         if len(data.shape) == 3 and len(adjecancy.shape) == 3:
             if data.shape[0] != adjecancy.shape[0]:
@@ -55,15 +65,15 @@ class GCN:
             if len(data.shape) == 3 and len(adjecancy.shape) == 3: #If we have multiple matrices, multiple graphs - for graph classification
                 total_loss = 0
                 for i, X in enumerate(data):
-                    total_loss += self.train_instance(adjecancy[i], X, targets[i], epoch)
+                    total_loss += self.train_instance(adjecancy[i], X, targets[i], epoch, mask)
             else:
-                total_loss = self.train_instance(adjecancy, data, targets, epoch)
+                total_loss = self.train_instance(adjecancy, data, targets, epoch, mask)
             print(f"Epoch {epoch + 1}/{epochs}, Total Loss: {total_loss}")
             if early_stopping is not None and abs(total_loss-prev_loss) < early_stopping:
                 return
             prev_loss = total_loss
 
-    def measure_accuracy(self, adjecancy, data, targets):
+    def measure_accuracy(self, adjecancy, data, targets, mask = None):
         predicted = []
         if len(data.shape) == 3 and len(adjecancy.shape) == 3: 
             #If we have multiple matrices, multiple graphs - for graph classification
@@ -74,4 +84,7 @@ class GCN:
                 predicted.append(self.forward(adjecancy[i], X))
         else:
             predicted = self.forward(adjecancy, data)
+        if mask is not None:
+            targets = targets[mask]
+            predicted = predicted[mask]
         return helpers.Metrics.accuracy(targets, predicted)
