@@ -16,9 +16,8 @@ class GCNLayer:
             'glorot':self.glorot_initialization,
             'he':self.he_initialization,
         }
-        if init_method in init_method_dict.keys():
+        if init_method not in init_method_dict.keys():
             init_method = 'glorot'
-            print('Unknown init method, using glorot...')
         self.W = init_method_dict[init_method](input_dim, output_dim)
         self.use_bias = use_bias
         if self.use_bias:

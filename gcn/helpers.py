@@ -24,16 +24,17 @@ class LossFunctions:
     @staticmethod
     def cross_entropy_loss(predictions, targets):
         # Avoid log(0) by clipping predictions
-        epsilon = 1e-8
+        epsilon = 1e-6
         predictions = np.clip(predictions, epsilon, 1. - epsilon)
         n = targets.shape[0]
         return -np.sum(targets * np.log(predictions)) / n
     @staticmethod
     def cross_entropy_loss_derivative(predictions, targets):
         # Derivative of cross-entropy loss with respect to predictions
-        epsilon = 1e-8
+        epsilon = 1e-6
         predictions = np.clip(predictions, epsilon, 1. - epsilon)
-        return -targets / predictions
+        n = targets.shape[0]
+        return (predictions-targets)/n
     
 class LearningRate:
     @staticmethod
@@ -66,3 +67,11 @@ class Metrics:
         
         accuracy = correct_predictions / total_predictions
         return accuracy
+    
+class Regularization:
+    @staticmethod
+    def dropout(X, dropout_rate=0.5, training=True):
+        if not training or dropout_rate == 0.0:
+            return X
+        mask = np.random.binomial(1, 1 - dropout_rate, size=X.shape)
+        return X * mask / (1 - dropout_rate)
